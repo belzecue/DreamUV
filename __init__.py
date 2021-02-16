@@ -16,7 +16,7 @@ bl_info = {
 
 if 'bpy' not in locals():
     import bpy
-    from bpy.props import EnumProperty, BoolProperty, FloatProperty
+    from bpy.props import EnumProperty, BoolProperty, FloatProperty, PointerProperty
     from . import DUV_UVTranslate, DUV_UVRotate, DUV_UVScale, DUV_UVExtend, DUV_UVStitch, DUV_UVTransfer, DUV_UVCycle, DUV_UVMirror, DUV_UVMoveToEdge,DUV_Utils,DUV_HotSpot,DUV_UVProject,DUV_UVUnwrap
 else:
     from importlib import reload
@@ -42,29 +42,29 @@ uvmenutype = [("SUBMENU", "Submenu", ""),
 class DUVUVToolsPreferences(bpy.types.AddonPreferences):
     bl_idname = __name__
 
-    pixel_snap = BoolProperty(
+    pixel_snap : BoolProperty(
         name="UV Pixel Snap",
         description="Translate Pixel Snapping",
         default=False
     )
 
-    move_snap = FloatProperty(
+    move_snap : FloatProperty(
         name="UV Move Snap",
         description="Translate Scale Subdivision Snap Size",
         default=0.25
     )
-    scale_snap = FloatProperty(
+    scale_snap : FloatProperty(
         name="UV Scale Snap",
         description="Scale Snap Size",
         default=2
     )
-    rotate_snap = FloatProperty(
+    rotate_snap : FloatProperty(
         name="UV Rotate Snap",
         description="Rotate Angle Snap Size",
         default=45
     )
 
-    show_panel_tools = BoolProperty(
+    show_panel_tools : BoolProperty(
         name="Show Tools in UV Panel",
         default=True
     )
@@ -219,8 +219,15 @@ class DUV_UVPanel(bpy.types.Panel):
         row = col.row(align = True)
         row.label(text="Atlas Object:")
         row.prop_search(context.scene, "subrect_atlas", context.scene, "objects", text="", icon="MOD_MULTIRES")
+
         col.separator()
-        col.operator("duv.hotspotter", text = "HotSpot", icon="SHADERFX")
+        row = col.row(align = True)
+        row.operator("uv.duv_hotspotter", text="HotSpot", icon="SHADERFX")
+        row.prop(context.scene, "duv_useorientation", icon="EVENT_W", text="")
+        row.prop(context.scene, "duv_usemirrorx", icon="EVENT_X", text="")
+        row.prop(context.scene, "duv_usemirrory", icon="EVENT_Y", text="")
+
+        
 
         col = self.layout.column(align = True)
         #col.enabled = True
@@ -262,10 +269,10 @@ def register():
     #if prefs().adduvmenu:
     #    bpy.types.VIEW3D_MT_uv_map.prepend(uv_menu_func)
     
-    bpy.types.Scene.subrect_atlas = bpy.props.StringProperty (
-        name = "atlas",
-        default = "hotspot atlas object",
-        description = "atlas object",
+    bpy.types.Scene.subrect_atlas = bpy.props.PointerProperty (
+        name="atlas",
+        type=bpy.types.Object,
+        description="atlas object",
         )
     bpy.types.Scene.uvtransferxmin = bpy.props.FloatProperty (
         name = "uvtransferxmin",
@@ -286,8 +293,22 @@ def register():
         name = "uvtransferymax",
         default = 1.0,
         description = "uv right top corner Y",
-        )  
-
+        )
+    bpy.types.Scene.duv_useorientation = bpy.props.BoolProperty (
+        name = "duv_useorientation",
+        default = False,
+        description = "Align UVs with world orientation",
+        )
+    bpy.types.Scene.duv_usemirrorx = bpy.props.BoolProperty (
+        name = "duv_usemirrorx",
+        default = True,
+        description = "Randomly mirror faces on the x-axis",
+        )
+    bpy.types.Scene.duv_usemirrory = bpy.props.BoolProperty (
+        name = "duv_usemirrory",
+        default = True,
+        description = "Randomly mirror faces on the y-axis",
+        )
 
 def unregister():
     for cls in reversed(classes):
@@ -298,6 +319,9 @@ def unregister():
     del bpy.types.Scene.uvtransferymin
     del bpy.types.Scene.uvtransferxmax
     del bpy.types.Scene.uvtransferymax
+    del bpy.types.Scene.duv_useorientation
+    del bpy.types.Scene.duv_usemirrorx
+    del bpy.types.Scene.duv_usemirrory
 
 if __name__ == "__main__":
     register()

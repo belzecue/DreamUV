@@ -8,13 +8,13 @@ from . import DUV_Utils
 
 class HotSpotter(bpy.types.Operator):
     """Unwrap selection using the atlas object as a guide"""
-    bl_idname = "duv.hotspotter"
-    bl_label = "hotspot these bad boyz"
+    bl_idname = "uv.duv_hotspotter"
+    bl_label = "hotspot"
     bl_options = {"UNDO"}
 
     def execute(self, context):
         #Check if an atlas object exists
-        if bpy.data.objects.get(context.scene.subrect_atlas) is None:
+        if context.scene.subrect_atlas is None:
             self.report({'WARNING'}, "No valid atlas selected!")
             return {'FINISHED'}
 
@@ -172,6 +172,11 @@ class HotSpotter(bpy.types.Operator):
                 bm = bmesh.from_edit_mesh(obj.data)
                 uv_layer = bm.loops.layers.uv.verify()
 
+            #rotate to world angle here:
+            DUV_Utils.get_orientation(context)
+
+            #return {'FINISHED'}
+
             #FIT TO 0-1 range
             xmin, xmax = HSfaces[0].loops[0][uv_layer].uv.x, HSfaces[0].loops[0][uv_layer].uv.x
             ymin, ymax = HSfaces[0].loops[0][uv_layer].uv.y, HSfaces[0].loops[0][uv_layer].uv.y
@@ -207,28 +212,65 @@ class HotSpotter(bpy.types.Operator):
             
             if is_rect is False:
                 #calulate ratio empty vs full
-                size = size / DUV_Utils.get_uv_ratio(context) 
+                sizeratio = DUV_Utils.get_uv_ratio(context)
+                #prevent divide by 0:
+                if sizeratio == 0:
+                    sizeratio = 1.0
+                size = size / sizeratio 
+
+            
+           
 
             if aspect > 1:
                 aspect = round(aspect)
             else:
                 aspect = 1/(round(1/aspect))
 
-            #print(aspect)
+            print("this is now problem")
+            print(aspect)
 
             #ASPECT LOWER THAN 1.0 = TALL
             #ASPECT HIGHER THAN 1.0 = WIDE
 
             #find closest aspect ratio in list
+
+            #2 variations depending on tall or wide
+            
             index = 0
-            templength = abs(atlas[0].aspect-aspect)
+            templength = abs(atlas[0].posaspect-aspect)
             tempindex = 0
-            for number in atlas:
-                testlength = abs(number.aspect-aspect) 
-                if testlength < templength:
-                    templength = testlength
-                    tempindex = index
-                index += 1
+
+            worldorientation = context.scene.duv_useorientation
+            
+
+            if worldorientation:
+                for number in atlas:
+                        testlength = abs(number.aspect-aspect) 
+                        if testlength < templength:
+                            templength = testlength
+                            tempindex = index
+                        index += 1
+
+            if not worldorientation:
+                    
+                #wide:
+                if aspect >= 1.0:
+                    for number in atlas:
+                        testlength = abs(number.posaspect-aspect) 
+                        if testlength < templength:
+                            templength = testlength
+                            tempindex = index
+                        index += 1
+                
+                #tall:
+                if aspect < 1.0:
+                    templength = abs((atlas[0].posaspect)-(1/aspect))
+                    for number in atlas:
+                        testlength = abs((number.posaspect)-(1/aspect)) 
+                        if testlength < templength:
+                            templength = testlength
+                            tempindex = index
+                        index += 1
 
             #NOW MAKE LIST OF ASPECTS!
             flipped = False
@@ -236,9 +278,10 @@ class HotSpotter(bpy.types.Operator):
             for r in atlas:
                 if r.aspect == atlas[tempindex].aspect:
                     aspectbucket.append(r)
-                if r.aspect == 1/atlas[tempindex].aspect:
-                    aspectbucket.append(r)
-        
+                if worldorientation is False:
+                    if r.aspect == 1/atlas[tempindex].aspect:
+                        aspectbucket.append(r)
+
             #find closest size in bucket:
             index = 0
 
@@ -321,6 +364,17 @@ class HotSpotter(bpy.types.Operator):
                         loop[uv_layer].uv.x = newx
                         loop[uv_layer].uv.y = newy
 
+            #figure out face orientation:
+            #need to find corners
+            #print('FACE ORIENTATION STUFF')
+            #for face in HSfaces:
+            #        for loop in face.loops:
+            #           print(loop)
+            #           print(loop.vert.co.z) 
+
+
+
+
             #apply the new UV
             for face in HSfaces:
                 for loop in face.loops:
@@ -332,19 +386,30 @@ class HotSpotter(bpy.types.Operator):
 
             bmesh.update_edit_mesh(obj.data)
 
-            #flip around square aspects randomly
-            if aspect == 1:
-                flips = random.randint(0, 3)
-                for x in range(flips):
-                    bpy.ops.uv.duv_uvcycle()
+
+            worldorientation = context.scene.duv_useorientation
+            use_mirrorx = context.scene.duv_usemirrorx
+            use_mirrory = context.scene.duv_usemirrory
+
+            #MIRRORING:
+
+            if worldorientation is False:
+                #flip around square aspects randomly
+                if aspect == 1:
+                    flips = random.randint(0, 3)
+                    for x in range(flips):
+                        bpy.ops.uv.duv_uvcycle()
             
             #and also do randomized mirroring:
-            randomMirrorX = random.randint(0, 1)
-            if randomMirrorX == 1:
-                op = bpy.ops.uv.duv_uvmirror(direction = "x")
-            randomMirrorY = random.randint(0, 1)
-            if randomMirrorY == 1:
-                op = bpy.ops.uv.duv_uvmirror(direction = "y")
+            if use_mirrorx is True:
+                randomMirrorX = random.randint(0, 1)
+                if randomMirrorX == 1:
+                    op = bpy.ops.uv.duv_uvmirror(direction = "x")
+
+            if use_mirrory is True:
+                randomMirrorY = random.randint(0, 1)
+                if randomMirrorY == 1:
+                    op = bpy.ops.uv.duv_uvmirror(direction = "y")
 
             
                 #now if it flipped to original position, flip it an extra time
