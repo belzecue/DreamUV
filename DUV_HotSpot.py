@@ -6,10 +6,10 @@ from mathutils import Vector
 from . import DUV_Utils
 
 
-class HotSpotter(bpy.types.Operator):
+class DREAMUV_OT_hotspotter(bpy.types.Operator):
     """Unwrap selection using the atlas object as a guide"""
-    bl_idname = "uv.duv_hotspotter"
-    bl_label = "hotspot"
+    bl_idname = "view3d.dreamuv_hotspotter"
+    bl_label = "HotSpot"
     bl_options = {"UNDO"}
 
     def execute(self, context):
@@ -18,6 +18,13 @@ class HotSpotter(bpy.types.Operator):
             self.report({'WARNING'}, "No valid atlas selected!")
             return {'FINISHED'}
 
+        #check for object or edit mode:
+        objectmode = False
+        if bpy.context.object.mode == 'OBJECT':
+            objectmode = True
+            #switch to edit and select all
+            bpy.ops.object.editmode_toggle() 
+            bpy.ops.mesh.select_all(action='SELECT')
 
         #PREPROCESS - save seams and hard edges
         obj = bpy.context.view_layer.objects.active
@@ -83,6 +90,20 @@ class HotSpotter(bpy.types.Operator):
                 updatedfaces.append(face)
                 tempfaces.append(face)
                 face.select = False
+
+        #ADD MATERIAL
+        #check if we want to add material, then check if it needs to be added, and keep index for later
+        if context.scene.duv_hotspotmaterial is not None:
+            matindex = 0
+            doesmatexist = False
+            for m in obj.data.materials:
+                if m == context.scene.duv_hotspotmaterial:
+                    doesmatexist = True
+                    break
+                matindex += 1
+            if doesmatexist is False:
+                obj.data.materials.append(context.scene.duv_hotspotmaterial)
+
 
         while len(tempfaces) > 0:
 
@@ -226,8 +247,6 @@ class HotSpotter(bpy.types.Operator):
             else:
                 aspect = 1/(round(1/aspect))
 
-            print("this is now problem")
-            print(aspect)
 
             #ASPECT LOWER THAN 1.0 = TALL
             #ASPECT HIGHER THAN 1.0 = WIDE
@@ -373,7 +392,13 @@ class HotSpotter(bpy.types.Operator):
             #           print(loop.vert.co.z) 
 
 
-
+            #check if uv needs to be inset
+            if context.scene.duv_hotspotuseinset is True:
+                pixel_inset = context.scene.hotspotinsetpixels/context.scene.hotspotinsettexsize
+                xmin += pixel_inset
+                xmax -= pixel_inset
+                ymin += pixel_inset
+                ymax -= pixel_inset
 
             #apply the new UV
             for face in HSfaces:
@@ -398,21 +423,25 @@ class HotSpotter(bpy.types.Operator):
                 if aspect == 1:
                     flips = random.randint(0, 3)
                     for x in range(flips):
-                        bpy.ops.uv.duv_uvcycle()
+                        bpy.ops.view3d.dreamuv_uvcycle()
             
             #and also do randomized mirroring:
             if use_mirrorx is True:
                 randomMirrorX = random.randint(0, 1)
                 if randomMirrorX == 1:
-                    op = bpy.ops.uv.duv_uvmirror(direction = "x")
+                    op = bpy.ops.view3d.dreamuv_uvmirror(direction = "x")
 
             if use_mirrory is True:
                 randomMirrorY = random.randint(0, 1)
                 if randomMirrorY == 1:
-                    op = bpy.ops.uv.duv_uvmirror(direction = "y")
+                    op = bpy.ops.view3d.dreamuv_uvmirror(direction = "y")
 
-            
-                #now if it flipped to original position, flip it an extra time
+            #apply material from index
+            if context.scene.duv_hotspotmaterial is not None:
+                for face in HSfaces:   
+                    face.material_index = matindex
+
+                
 
 
         obj = bpy.context.view_layer.objects.active
@@ -420,6 +449,10 @@ class HotSpotter(bpy.types.Operator):
         for face in faces:
             face.select = True
         bmesh.update_edit_mesh(obj.data)
-
         bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='FACE')
+
+        if objectmode is True:
+            bpy.ops.mesh.select_all(action='DESELECT')
+            bpy.ops.object.editmode_toggle() 
+
         return {'FINISHED'}

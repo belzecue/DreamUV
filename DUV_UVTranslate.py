@@ -5,10 +5,10 @@ from mathutils import Vector
 from . import DUV_Utils
 
 
-class UVTranslate(bpy.types.Operator):
+class DREAMUV_OT_uv_translate(bpy.types.Operator):
     """Translate UVs in the 3D Viewport"""
-    bl_idname = "uv.duv_uvtranslate"
-    bl_label = "DUV UVTranslate"
+    bl_idname = "view3d.dreamuv_uvtranslate"
+    bl_label = "UV Translate"
     bl_options = {"GRAB_CURSOR", "UNDO", "BLOCKING"}
 
     first_mouse_x = None
@@ -238,13 +238,13 @@ class UVTranslate(bpy.types.Operator):
 
         return {'RUNNING_MODAL'}
 
-class UVTranslateStep(bpy.types.Operator):
+class DREAMUV_OT_uv_translate_step(bpy.types.Operator):
     """Move UVs using snap size"""
-    bl_idname = "uv.duv_uvtranslatestep"
-    bl_label = "move"
+    bl_idname = "view3d.dreamuv_uvtranslatestep"
+    bl_label = "UV Translate Step"
     bl_options = {"UNDO"}
 
-    direction = bpy.props.StringProperty()
+    direction : bpy.props.StringProperty()
 
     def execute(self, context): 
         mesh = bpy.context.object.data

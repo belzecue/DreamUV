@@ -3,13 +3,13 @@ import math
 import bmesh
 from mathutils import Vector
 
-class UVMirror(bpy.types.Operator):
+class DREAMUV_OT_uv_mirror(bpy.types.Operator):
     """Mirror UVs but retain uv edge positions"""
-    bl_idname = "uv.duv_uvmirror"
+    bl_idname = "view3d.dreamuv_uvmirror"
     bl_label = "3D View UV Mirror"
     bl_options = {"UNDO"}
 
-    direction = bpy.props.StringProperty()
+    direction : bpy.props.StringProperty()
 
     def execute(self, context):
         mesh = bpy.context.object.data

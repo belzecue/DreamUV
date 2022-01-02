@@ -68,9 +68,6 @@ def get_orientation(context):
     bound3 = Vector((xmin,ymax))
     middle = Vector(( ((xmax+xmin)/2)- bound0.x,((ymax+ymin)/2)-bound0.y ))
 
-
-
-    print("find corner 0:")
     distance = middle.length
     corner0 = faces[0].loops[0]
     for f in faces:
@@ -81,9 +78,7 @@ def get_orientation(context):
             if tempdistance <= distance:
                 distance = tempdistance
                 corner0 = loop
-    print(corner0[uv_layer].uv)
-    
-    print("find corner 1:")
+
     distance = middle.length
     corner1 = faces[0].loops[0]
     for f in faces:
@@ -94,9 +89,7 @@ def get_orientation(context):
             if tempdistance <= distance:
                 distance = tempdistance
                 corner1 = loop
-    print(corner1[uv_layer].uv)
-    
-    print("find corner 2:")
+
     distance = middle.length
     corner2 = faces[0].loops[0]
     for f in faces:
@@ -107,9 +100,7 @@ def get_orientation(context):
             if tempdistance <= distance:
                 distance = tempdistance
                 corner2 = loop
-    print(corner2[uv_layer].uv)
 
-    print("find corner 3:")
     distance = middle.length
     corner3 = faces[0].loops[0]
     for f in faces:
@@ -120,18 +111,18 @@ def get_orientation(context):
             if tempdistance <= distance:
                 distance = tempdistance
                 corner3 = loop
-    print(corner3[uv_layer].uv)
+
 
     #orientations:
     # 3 2   0 3   1 0   2 1
     # 0 1   1 2   2 3   3 0  
 
     #1st case:
-    if corner3.vert.co.z >= corner0.vert.co.z and corner2.vert.co.z >= corner1.vert.co.z and corner3.vert.co.z >= corner1.vert.co.z and corner2.vert.co.z >= corner0.vert.co.z:
-        print("case1")
+    #if corner3.vert.co.z >= corner0.vert.co.z and corner2.vert.co.z >= corner1.vert.co.z and corner3.vert.co.z >= corner1.vert.co.z and corner2.vert.co.z >= corner0.vert.co.z:
+        #print("case1")
     
     if corner0.vert.co.z >= corner1.vert.co.z and corner3.vert.co.z >= corner2.vert.co.z and corner0.vert.co.z >= corner2.vert.co.z and corner3.vert.co.z >= corner1.vert.co.z:
-        print("case2")
+        #print("case2")
         for face in faces:
             for loop in face.loops:
                 newx = loop[uv_layer].uv.y
@@ -140,7 +131,7 @@ def get_orientation(context):
                 loop[uv_layer].uv.y = newy
 
     if corner1.vert.co.z >= corner2.vert.co.z and corner0.vert.co.z >= corner3.vert.co.z and corner1.vert.co.z >= corner3.vert.co.z and corner0.vert.co.z >= corner2.vert.co.z:
-        print("case3")
+        #print("case3")
         for face in faces:
             for loop in face.loops:
                 newx = -loop[uv_layer].uv.x
@@ -149,7 +140,7 @@ def get_orientation(context):
                 loop[uv_layer].uv.y = newy
 
     if corner2.vert.co.z >= corner3.vert.co.z and corner1.vert.co.z >= corner0.vert.co.z and corner2.vert.co.z >= corner0.vert.co.z and corner1.vert.co.z >= corner3.vert.co.z:
-        print("case4")
+        #print("case4")
         for face in faces:
             for loop in face.loops:
                 newx = -loop[uv_layer].uv.y
@@ -161,6 +152,8 @@ def get_orientation(context):
     
 
 def get_uv_ratio(context):
+    #figure out uv size to then compare against subrect size
+    #to do this I project the mesh using uv coords so i can calculate the area using sum(f.calc_area(). Because I am too lazy to figure out the math
     #this code is terrible, someone who knows math make this better, thanks
     obj = bpy.context.view_layer.objects.active
     bm = bmesh.from_edit_mesh(obj.data)
@@ -226,6 +219,7 @@ def read_atlas(context):
         edge1 = xmax - xmin
         edge2 = ymax - ymin
 
+        
         rect = list()
         
         for loop in face.loops:
@@ -250,13 +244,24 @@ def read_atlas(context):
                 posaspect = 1/posaspect
             #calculate size
             size = face.calc_area()
+
+            #adjust scale
+            size /= context.scene.duvhotspotscale*context.scene.duvhotspotscale
+
             size = float('%.2g' % size) #round to 2 significant digits
+
+            
 
 
             new_subrect.aspect = aspect
             new_subrect.posaspect = posaspect
             new_subrect.size = size
             atlas.append(new_subrect)   
+
+    #print("atlas")
+    #print(atlas)
+    #for a in atlas:
+    #    print(a.posaspect)
     return atlas
 
 
@@ -281,7 +286,7 @@ def square_fit(context):
     distorted = False
 
     for face in faces: 
-        if len(face.loops) is not 4 :
+        if len(face.loops) != 4 :
             quadmethod = False
             #print('no quad!')
 
@@ -400,7 +405,7 @@ def square_fit(context):
                 topindex = i
         #print(sorted_angle_list[topindex])
         
-        if o is 3:
+        if o == 3:
             if sorted_angle_list[topindex] > 120:
                 distorted = True
 
@@ -436,18 +441,18 @@ def square_fit(context):
         sorted_uv_list.append(sorted_uv_list.pop(0))
         sorted_vert_list.append(sorted_vert_list.pop(0))
 
-    print("THESE ARE THE CORNERS")
-    print(sorted_corner_list)
+    #print("THESE ARE THE CORNERS")
+    #print(sorted_corner_list)
     #create coord list:
 
     cornerz = list()
 
     for i in range(len(sorted_vert_list)):
         if sorted_corner_list[i] is True:
-            print(sorted_vert_list[i].co.z)
+            #print(sorted_vert_list[i].co.z)
             cornerz.append(sorted_vert_list[i].co.z)
 
-    print(cornerz)
+    #print(cornerz)
     #avgedge1 = cornerz[0] + cornerz[1]
     #avgedge2 = cornerz[0] + cornerz[3]
     #print(avgedge1)
@@ -463,7 +468,7 @@ def square_fit(context):
     for i in range(len(sorted_vert_list)):
         if sorted_corner_list[i] is True:
             sorted_edge_ratios.append(0)
-            if i is not 0:
+            if i != 0:
                 l = (sorted_vert_list[i-1].co.xyz - sorted_vert_list[i].co.xyz).length
                 edge.append(sorted_edge_ratios[i-1] + l)
             
@@ -621,6 +626,9 @@ class subrect:
     aspect = int()
     posaspect = int()
     size = float()
+    uvcoord = list()
+
+class trim:
     uvcoord = list()
 
 
